@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Color Catcher: Multiplayer</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: radial-gradient(circle at top, #0f1129, #090a16);
+      font-family: 'Segoe UI', Tahoma, sans-serif;
+      color: white;
+      overflow: hidden;
+    }
+
+    #game {
+      width: 100vw;
+      height: 100vh;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .scoreboard {
+      position: absolute;
+      top: 10px;
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      padding: 0 40px;
+      z-index: 10;
+      font-size: 20px;
+      font-weight: bold;
+    }
+
+    .player {
+      position: absolute;
+      bottom: 20px;
+      width: 100px;
+      height: 16px;
+      border-radius: 10px;
+      transition: transform 0.1s ease;
+    }
+
+    .p1 {
+      background: linear-gradient(to right, #4e9eff, #8c7dff);
+      box-shadow: 0 0 20px #4e9eff;
+    }
+
+    .p2 {
+      background: linear-gradient(to right, #ff6bb5, #ffa0d3);
+      box-shadow: 0 0 20px #ff6bb5;
+    }
+
+    .block {
+      position: absolute;
+      width: 40px;
+      height: 40px;
+      border-radius: 8px;
+      top: 0;
+    }
+
+    .blue {
+      background: linear-gradient(to bottom right, #3498db, #2980b9);
+      box-shadow: 0 0 10px #3498db;
+    }
+
+    .pink {
+      background: linear-gradient(to bottom right, #ff69b4, #e754a6);
+      box-shadow: 0 0 10px #ff69b4;
+    }
+
+    #winner {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0, 0, 0, 0.85);
+      padding: 30px 60px;
+      font-size: 30px;
+      border-radius: 12px;
+      box-shadow: 0 0 30px rgba(255, 255, 255, 0.2);
+      display: none;
+      z-index: 100;
+      text-align: center;
+    }
+
+    #winner button {
+      margin-top: 15px;
+      padding: 10px 20px;
+      font-size: 18px;
+      background: #4e9eff;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      color: white;
+      font-weight: bold;
+      transition: background 0.3s ease, transform 0.2s ease;
+    }
+
+    #winner button:hover {
+      background: #3d7ddd;
+      transform: scale(1.05);
+    }
+  </style>
+</head>
+<body>
+  <div id="game">
+    <div class="scoreboard">
+      <div>Player 1: <span id="score1">0</span></div>
+      <div>Player 2: <span id="score2">0</span></div>
+    </div>
+    <div id="player1" class="player p1"></div>
+    <div id="player2" class="player p2"></div>
+    <div id="winner"></div>
+  </div>
+
+  <script>
+    const game = document.getElementById("game");
+    const player1 = document.getElementById("player1");
+    const player2 = document.getElementById("player2");
+    const score1El = document.getElementById("score1");
+    const score2El = document.getElementById("score2");
+    const winnerScreen = document.getElementById("winner");
+
+    let p1x = window.innerWidth / 4 - 50;
+    let p2x = (window.innerWidth * 3) / 4 - 50;
+    let blocks = [];
+    let score1 = 0;
+    let score2 = 0;
+    let gameRunning = true;
+
+    player1.style.transform = `translateX(${p1x}px)`;
+    player2.style.transform = `translateX(${p2x}px)`;
+
+    function createBlock() {
+      if (!gameRunning) return;
+      const block = document.createElement("div");
+      const isBlue = Math.random() < 0.5;
+      block.classList.add("block", isBlue ? "blue" : "pink");
+      block.style.left = Math.random() * (window.innerWidth - 40) + "px";
+      game.appendChild(block);
+      blocks.push({ el: block, y: 0, color: isBlue ? "blue" : "pink" });
+      setTimeout(createBlock, 700);
+    }
+
+    function updateBlocks() {
+      if (!gameRunning) return;
+      blocks.forEach((block, index) => {
+        block.y += 5;
+        block.el.style.top = block.y + "px";
+
+        const rect1 = player1.getBoundingClientRect();
+        const rect2 = player2.getBoundingClientRect();
+        const bRect = block.el.getBoundingClientRect();
+
+        if (
+          bRect.bottom >= rect1.top &&
+          bRect.left < rect1.right &&
+          bRect.right > rect1.left &&
+          block.color === "blue"
+        ) {
+          score1++;
+          score1El.textContent = score1;
+          block.el.remove();
+          blocks.splice(index, 1);
+        } else if (
+          bRect.bottom >= rect2.top &&
+          bRect.left < rect2.right &&
+          bRect.right > rect2.left &&
+          block.color === "pink"
+        ) {
+          score2++;
+          score2El.textContent = score2;
+          block.el.remove();
+          blocks.splice(index, 1);
+        } else if (block.y > window.innerHeight) {
+          block.el.remove();
+          blocks.splice(index, 1);
+        }
+
+        if (score1 >= 10 || score2 >= 10) {
+          showWinner(score1 >= 10 ? "Player 1" : "Player 2");
+        }
+      });
+
+      requestAnimationFrame(updateBlocks);
+    }
+
+    function showWinner(player) {
+      gameRunning = false;
+      winnerScreen.innerHTML = `${player} Wins!<br><button onclick="restart()">Play Again</button>`;
+      winnerScreen.style.display = "block";
+    }
+
+    function restart() {
+      location.reload();
+    }
+
+    function movePlayers(e) {
+      if (!gameRunning) return;
+      if (e.key === "ArrowLeft") p1x -= 30;
+      if (e.key === "ArrowRight") p1x += 30;
+      if (e.key === "a") p2x -= 30;
+      if (e.key === "d") p2x += 30;
+
+      p1x = Math.max(0, Math.min(window.innerWidth - 100, p1x));
+      p2x = Math.max(0, Math.min(window.innerWidth - 100, p2x));
+
+      player1.style.transform = `translateX(${p1x}px)`;
+      player2.style.transform = `translateX(${p2x}px)`;
+    }
+
+    window.addEventListener("keydown", movePlayers);
+    window.onload = () => {
+      createBlock();
+      updateBlocks();
+    };
+  </script>
+</body>
+</html>
